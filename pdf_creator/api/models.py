@@ -1,20 +1,22 @@
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
-from django.contrib.auth.models import (AbstractBaseUser, PermissionsMixin, BaseUserManager)
-from time import timezone
+from django.utils import timezone
 
-class CustomUserManager (BaseUserManager):
-    def create_user (self, email, password=None, **extra_fields):
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("Email is required")
         email = self.normalize_email(email)
-        user = self.model(email, **extra_fields)
+        user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
-        return user    
+        return user
+
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(email, password, **extra_fields)
+
 
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
@@ -30,25 +32,19 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-    
-    
-class Pdfs(models.Model):
+
+class PDFReport(models.Model):
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'
         APPROVED = 1, 'Approved'
         REJECTED = 2, 'Rejected'
-
-    user = models.ForeignKey()
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='pdf_reports')
     title = models.CharField(max_length=255)
-    description = models.TextField()
-    content = models.TextField(null=True, blank=True)
-    status = models.IntegerField(choices=Status.choices, default=Status.PENDING)
-    path = models.CharField(max_length=1024, null=True, blank=True)
+    content = models.TextField()
+    file_path = models.CharField(max_length=500, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    
-    
+    status = models.IntegerField(choices=Status.choices, default=Status.PENDING)
     
 
     def __str__(self):
-        return f"{self.title} ({self.get_status_display()})"
+        return self.title
